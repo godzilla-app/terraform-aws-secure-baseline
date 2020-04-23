@@ -236,5 +236,15 @@ resource "aws_cloudtrail" "global" {
   s3_key_prefix                 = var.s3_key_prefix
   sns_topic_name                = aws_sns_topic.cloudtrail-sns-topic[0].arn
 
+  event_selector {
+    read_write_type           = "All"
+    include_management_events = true
+
+    data_resource {
+      type   = "AWS::S3::Object"
+      values = ["arn:aws:s3:::"]
+    }
+  }
+
   tags = var.tags
 }
