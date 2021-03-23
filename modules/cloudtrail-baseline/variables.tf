@@ -12,9 +12,19 @@ variable "cloudtrail_name" {
   default     = "cloudtrail-multi-region"
 }
 
+variable "cloudtrail_sns_topic_enabled" {
+  description = "Specifies whether the trail is delivered to a SNS topic."
+  default     = true
+}
+
 variable "cloudtrail_sns_topic_name" {
-  description = "The sns topic linked to the cloudtrail"
+  description = "The SNS topic linked to the CloudTrail"
   default     = "cloudtrail-multi-region-sns-topic"
+}
+
+variable "cloudwatch_logs_enabled" {
+  description = "Specifies whether the trail is delivered to CloudWatch Logs."
+  default     = true
 }
 
 variable "cloudwatch_logs_group_name" {
@@ -60,9 +70,22 @@ variable "is_organization_trail" {
   default     = false
 }
 
+variable "s3_object_level_logging_buckets" {
+  description = "The list of S3 bucket ARNs on which to enable object-level logging."
+  default     = ["arn:aws:s3:::"] # All S3 buckets
+}
+
 variable "tags" {
   description = "Specifies object tags key and value. This applies to all resources created by this module."
   default = {
     "Terraform" = true
   }
+}
+
+# Use the hack to inject external dependencies from outsite the module.
+# See below for more detail.
+# https://stackoverflow.com/questions/58275233/terraform-depends-on-with-modules
+variable "cloudtrail_depends_on" {
+  description = "External resources which should be set up before CloudTrail."
+  default     = []
 }

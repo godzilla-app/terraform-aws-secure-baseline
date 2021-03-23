@@ -1,12 +1,86 @@
 <a name="unreleased"></a>
 ## [Unreleased]
 
-<a name="0.16.2"></a>
-## [0.17.0] - 2019-12-14
-### Feat
-- add `audit_log_bucket_custom_policy_json` variable
-- create an SNS topic for notifications of CloudTrail log delivery
 
+<a name="0.23.1"></a>
+## [0.23.1] - 2020-12-13
+### Fix
+- invalid reference when flow logs is disabled ([#157](https://github.com/nozaq/terraform-aws-secure-baseline/issues/157))
+
+
+<a name="0.23.0"></a>
+## [0.23.0] - 2020-11-23
+### Feat
+- use the audit log bucket for Flow Logs by default ([#152](https://github.com/nozaq/terraform-aws-secure-baseline/issues/152))
+- add option to publish VPC Flow Logs to either S3 or CW ([#151](https://github.com/nozaq/terraform-aws-secure-baseline/issues/151))
+- associate members to master in SecurityHub ([#147](https://github.com/nozaq/terraform-aws-secure-baseline/issues/147))
+- add a flag to enable/disable VPC Flow Logs ([#146](https://github.com/nozaq/terraform-aws-secure-baseline/issues/146))
+
+
+<a name="0.22.0"></a>
+## [0.22.0] - 2020-11-14
+### Feat
+- apply tags to default network resources ([#133](https://github.com/nozaq/terraform-aws-secure-baseline/issues/133))
+
+### Fix
+- logging policies when using custom prefixes ([#141](https://github.com/nozaq/terraform-aws-secure-baseline/issues/141))
+- deprecation warnings ([#140](https://github.com/nozaq/terraform-aws-secure-baseline/issues/140))
+- prevent AWS Config to fire alarms ([#139](https://github.com/nozaq/terraform-aws-secure-baseline/issues/139))
+
+
+<a name="0.21.0"></a>
+## [0.21.0] - 2020-09-24
+### Feat
+- various updates to comply with CIS Benchmark v1.3.0 ([#131](https://github.com/nozaq/terraform-aws-secure-baseline/issues/131))
+- force using HTTPS to access the access log bucket ([#129](https://github.com/nozaq/terraform-aws-secure-baseline/issues/129))
+- force using HTTPS to access the audit log bucket ([#128](https://github.com/nozaq/terraform-aws-secure-baseline/issues/128))
+- add parameters to make role creations optional ([#127](https://github.com/nozaq/terraform-aws-secure-baseline/issues/127))
+- add tags to guardduty ([#121](https://github.com/nozaq/terraform-aws-secure-baseline/issues/121))
+- add tags to flow logs ([#120](https://github.com/nozaq/terraform-aws-secure-baseline/issues/120))
+
+### Fix
+- remove a redundant Config rule ([#132](https://github.com/nozaq/terraform-aws-secure-baseline/issues/132))
+
+
+<a name="0.20.0"></a>
+## [0.20.0] - 2020-08-10
+### Feat
+- make all roles to be optional ([#115](https://github.com/nozaq/terraform-aws-secure-baseline/issues/115))
+
+### Fix
+- add a wildcard suffix to log group ARN ([#119](https://github.com/nozaq/terraform-aws-secure-baseline/issues/119))
+
+
+<a name="0.19.0"></a>
+## [0.19.0] - 2020-08-10
+### Feat
+- new SecurityHub standards support ([#113](https://github.com/nozaq/terraform-aws-secure-baseline/issues/113))
+- make delivery of CloudTrail to CloudWatch Logs and SNS optional ([#117](https://github.com/nozaq/terraform-aws-secure-baseline/issues/117))
+
+### Fix
+- support standard options for ap-east-1
+
+
+<a name="0.18.1"></a>
+## [0.18.1] - 2020-05-31
+### Fix
+- do not enable SecurityHub when not enabled ([#111](https://github.com/nozaq/terraform-aws-secure-baseline/issues/111))
+
+
+<a name="0.18.0"></a>
+## [0.18.0] - 2020-05-17
+### Feat
+- enable Security Hub in each region ([#105](https://github.com/nozaq/terraform-aws-secure-baseline/issues/105))
+- encrypt the sns topic ([#103](https://github.com/nozaq/terraform-aws-secure-baseline/issues/103))
+
+### Fix
+- use the same CMK for encrypting the SNS topic ([#104](https://github.com/nozaq/terraform-aws-secure-baseline/issues/104))
+- ensure to have the audit log bucket before CloudTrail ([#102](https://github.com/nozaq/terraform-aws-secure-baseline/issues/102))
+- add in new region ([#91](https://github.com/nozaq/terraform-aws-secure-baseline/issues/91))
+
+
+<a name="0.17.0"></a>
+## [0.17.0] - 2019-12-14
 
 <a name="0.16.2"></a>
 ## [0.16.2] - 2019-11-16
@@ -190,7 +264,16 @@
 <a name="0.0.1"></a>
 ## 0.0.1 - 2018-02-12
 
-[Unreleased]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.16.2...HEAD
+[Unreleased]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.23.1...HEAD
+[0.23.1]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.23.0...0.23.1
+[0.23.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.22.0...0.23.0
+[0.22.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.21.0...0.22.0
+[0.21.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.20.0...0.21.0
+[0.20.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.19.0...0.20.0
+[0.19.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.18.1...0.19.0
+[0.18.1]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.18.0...0.18.1
+[0.18.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.17.0...0.18.0
+[0.17.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.16.2...0.17.0
 [0.16.2]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.16.1...0.16.2
 [0.16.1]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.16.0...0.16.1
 [0.16.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.15.0...0.16.0

@@ -2,26 +2,6 @@ variable "aws_account_id" {
   description = "The AWS Account ID number of the account."
 }
 
-variable "master_iam_role_name" {
-  description = "The name of the IAM Master role."
-  default     = "IAM-Master"
-}
-
-variable "master_iam_role_policy_name" {
-  description = "The name of the IAM Master role policy."
-  default     = "IAM-Master-Policy"
-}
-
-variable "manager_iam_role_name" {
-  description = "The name of the IAM Manager role."
-  default     = "IAM-Manager"
-}
-
-variable "manager_iam_role_policy_name" {
-  description = "The name of the IAM Manager role policy."
-  default     = "IAM-Manager-Policy"
-}
-
 variable "support_iam_role_name" {
   description = "The name of the the support role."
   default     = "IAM-Support"
@@ -33,7 +13,7 @@ variable "support_iam_role_policy_name" {
 }
 
 variable "support_iam_role_principal_arns" {
-  type        = list
+  type        = list(any)
   description = "List of ARNs of the IAM principal elements by which the support role could be assumed."
 }
 
@@ -74,6 +54,18 @@ variable "require_symbols" {
 
 variable "allow_users_to_change_password" {
   description = "Whether to allow users to change their own password."
+  default     = true
+}
+
+variable "create_password_policy" {
+  type        = bool
+  description = "Define if the password policy should be created."
+  default     = true
+}
+
+variable "create_support_role" {
+  type        = bool
+  description = "Define if the support role should be created."
   default     = true
 }
 

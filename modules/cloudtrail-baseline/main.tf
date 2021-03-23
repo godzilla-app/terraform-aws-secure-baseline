@@ -2,7 +2,7 @@
 # CloudWatch Logs group to accept CloudTrail event stream.
 # --------------------------------------------------------------------------------------------------
 resource "aws_cloudwatch_log_group" "cloudtrail_events" {
-  count = var.enabled ? 1 : 0
+  count = var.cloudwatch_logs_enabled && var.enabled ? 1 : 0
 
   name              = var.cloudwatch_logs_group_name
   retention_in_days = var.cloudwatch_logs_retention_in_days
@@ -26,7 +26,7 @@ data "aws_iam_policy_document" "cloudwatch_delivery_assume_policy" {
 }
 
 resource "aws_iam_role" "cloudwatch_delivery" {
-  count = var.enabled ? 1 : 0
+  count = var.cloudwatch_logs_enabled && var.enabled ? 1 : 0
 
   name               = var.iam_role_name
   assume_role_policy = data.aws_iam_policy_document.cloudwatch_delivery_assume_policy.json
@@ -35,7 +35,7 @@ resource "aws_iam_role" "cloudwatch_delivery" {
 }
 
 data "aws_iam_policy_document" "cloudwatch_delivery_policy" {
-  count = var.enabled ? 1 : 0
+  count = var.cloudwatch_logs_enabled && var.enabled ? 1 : 0
 
   statement {
     sid       = "AWSCloudTrailCreateLogStream2014110"
@@ -51,7 +51,7 @@ data "aws_iam_policy_document" "cloudwatch_delivery_policy" {
 }
 
 resource "aws_iam_role_policy" "cloudwatch_delivery_policy" {
-  count = var.enabled ? 1 : 0
+  count = var.cloudwatch_logs_enabled && var.enabled ? 1 : 0
 
   name = var.iam_role_policy_name
   role = aws_iam_role.cloudwatch_delivery[0].id
@@ -61,7 +61,7 @@ resource "aws_iam_role_policy" "cloudwatch_delivery_policy" {
 
 # --------------------------------------------------------------------------------------------------
 # KMS Key to encrypt CloudTrail events.
-# The policy was derived from the default key policy descrived in AWS CloudTrail User Guide.
+# The policy was derived from the default key policy described in AWS CloudTrail User Guide.
 # https://docs.aws.amazon.com/awscloudtrail/latest/userguide/default-cmk-policy.html
 # --------------------------------------------------------------------------------------------------
 data "aws_iam_policy_document" "cloudtrail_key_policy" {
@@ -119,7 +119,7 @@ data "aws_iam_policy_document" "cloudtrail_key_policy" {
     condition {
       test     = "StringEquals"
       variable = "kms:CallerAccount"
-      values   = ["${var.aws_account_id}"]
+      values   = [var.aws_account_id]
     }
     condition {
       test     = "StringLike"
@@ -144,7 +144,7 @@ data "aws_iam_policy_document" "cloudtrail_key_policy" {
     condition {
       test     = "StringEquals"
       variable = "kms:CallerAccount"
-      values   = ["${var.aws_account_id}"]
+      values   = [var.aws_account_id]
     }
   }
 
@@ -162,13 +162,27 @@ data "aws_iam_policy_document" "cloudtrail_key_policy" {
     condition {
       test     = "StringEquals"
       variable = "kms:CallerAccount"
-      values   = ["${var.aws_account_id}"]
+      values   = [var.aws_account_id]
     }
     condition {
       test     = "StringLike"
       variable = "kms:EncryptionContext:aws:cloudtrail:arn"
       values   = ["arn:aws:cloudtrail:*:${var.aws_account_id}:trail/*"]
     }
+  }
+
+  # https://docs.aws.amazon.com/awscloudtrail/latest/userguide/cloudtrail-permissions-for-sns-notifications.html
+  statement {
+    sid = "Allow CloudTrail to send notifications to the encrypted SNS topic"
+    principals {
+      type        = "Service"
+      identifiers = ["cloudtrail.amazonaws.com"]
+    }
+    actions = [
+      "kms:GenerateDataKey*",
+      "kms:Decrypt"
+    ]
+    resources = ["*"]
   }
 }
 
@@ -190,13 +204,14 @@ resource "aws_kms_key" "cloudtrail" {
 # --------------------------------------------------------------------------------------------------
 
 resource "aws_sns_topic" "cloudtrail-sns-topic" {
-  count = var.enabled ? 1 : 0
+  count = var.cloudtrail_sns_topic_enabled && var.enabled ? 1 : 0
 
-  name = var.cloudtrail_sns_topic_name
+  name              = var.cloudtrail_sns_topic_name
+  kms_master_key_id = aws_kms_key.cloudtrail[0].id
 }
 
 data "aws_iam_policy_document" "cloudtrail-sns-policy" {
-  count = var.enabled ? 1 : 0
+  count = var.cloudtrail_sns_topic_enabled && var.enabled ? 1 : 0
 
   statement {
     actions   = ["sns:Publish"]
@@ -210,7 +225,7 @@ data "aws_iam_policy_document" "cloudtrail-sns-policy" {
 }
 
 resource "aws_sns_topic_policy" "local-account-cloudtrail" {
-  count = var.enabled ? 1 : 0
+  count = var.cloudtrail_sns_topic_enabled && var.enabled ? 1 : 0
 
   arn    = aws_sns_topic.cloudtrail-sns-topic[0].arn
   policy = data.aws_iam_policy_document.cloudtrail-sns-policy[0].json
@@ -224,7 +239,6 @@ resource "aws_cloudtrail" "global" {
   count = var.enabled ? 1 : 0
 
   name = var.cloudtrail_name
-
   cloud_watch_logs_group_arn    = "${aws_cloudwatch_log_group.cloudtrail_events[0].arn}:*" 
   cloud_watch_logs_role_arn     = aws_iam_role.cloudwatch_delivery[0].arn
   enable_log_file_validation    = true
@@ -234,7 +248,17 @@ resource "aws_cloudtrail" "global" {
   kms_key_id                    = aws_kms_key.cloudtrail[0].arn
   s3_bucket_name                = var.s3_bucket_name
   s3_key_prefix                 = var.s3_key_prefix
-  sns_topic_name                = aws_sns_topic.cloudtrail-sns-topic[0].arn
+  sns_topic_name                = var.cloudtrail_sns_topic_enabled ? aws_sns_topic.cloudtrail-sns-topic[0].arn : null
+
+  event_selector {
+    read_write_type           = "All"
+    include_management_events = true
+
+    data_resource {
+      type   = "AWS::S3::Object"
+      values = var.s3_object_level_logging_buckets
+    }
+  }
 
   event_selector {
     read_write_type           = "All"
@@ -247,4 +271,6 @@ resource "aws_cloudtrail" "global" {
   }
 
   tags = var.tags
+
+  depends_on = [var.cloudtrail_depends_on]
 }
