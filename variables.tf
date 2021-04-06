@@ -87,6 +87,30 @@ variable "use_external_audit_log_bucket" {
 # --------------------------------------------------------------------------------------------------
 # Variables for iam-baseline module.
 # --------------------------------------------------------------------------------------------------
+variable "create_password_policy" {
+  type        = bool
+  description = "Define if the password policy should be created."
+  default     = true
+}
+
+variable "create_master_role" {
+  type        = bool
+  description = "Define if the master role should be created."
+  default     = true
+}
+
+variable "create_manager_role" {
+  type        = bool
+  description = "Define if the manager role should be created."
+  default     = true
+}
+
+variable "create_support_role" {
+  type        = bool
+  description = "Define if the support role should be created."
+  default     = true
+}
+
 variable "master_iam_role_name" {
   description = "The name of the IAM Master role."
   default     = "IAM-Master"
@@ -118,7 +142,7 @@ variable "support_iam_role_policy_name" {
 }
 
 variable "support_iam_role_principal_arns" {
-  type        = list
+  type        = list(any)
   description = "List of ARNs of the IAM principal elements by which the support role could be assumed."
 }
 
@@ -175,15 +199,36 @@ variable "vpc_iam_role_policy_name" {
   default     = "VPC-Flow-Logs-Publish-Policy"
 }
 
-variable "vpc_log_group_name" {
+variable "vpc_enable_flow_logs" {
+  description = "The boolean flag whether to enable VPC Flow Logs in default VPCs"
+  default     = true
+}
+
+variable "vpc_flow_logs_destination_type" {
+  description = "The type of the logging destination. Valid values: cloud-watch-logs, s3"
+  default     = "cloud-watch-logs"
+}
+
+variable "vpc_flow_logs_log_group_name" {
   description = "The name of CloudWatch Logs group to which VPC Flow Logs are delivered."
   default     = "default-vpc-flow-logs"
 }
 
-variable "vpc_log_retention_in_days" {
-  description = "Number of days to retain logs for. CIS recommends 365 days.  Possible values are: 0, 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, and 3653. Set to 0 to keep logs indefinitely."
+variable "vpc_flow_logs_retention_in_days" {
+  description = "Number of days to retain logs if vpc_log_destination_type is cloud-watch-logs. CIS recommends 365 days. Possible values are: 0, 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, and 3653. Set to 0 to keep logs indefinitely."
   default     = 365
 }
+
+variable "vpc_flow_logs_s3_arn" {
+  description = "ARN of the S3 bucket to which VPC Flow Logs are delivered if vpc_log_destination_type is s3."
+  default     = ""
+}
+
+variable "vpc_flow_logs_s3_key_prefix" {
+  description = "The prefix used when VPC Flow Logs delivers logs to the S3 bucket."
+  default     = "flow-logs"
+}
+
 
 # --------------------------------------------------------------------------------------------------
 # Variables for config-baseline module.
@@ -228,6 +273,11 @@ variable "config_aggregator_name_prefix" {
 # Variables for cloudtrail-baseline module.
 # --------------------------------------------------------------------------------------------------
 
+variable "cloudtrail_cloudwatch_logs_enabled" {
+  description = "Specifies whether the trail is delivered to CloudWatch Logs."
+  default     = true
+}
+
 variable "cloudtrail_cloudwatch_logs_group_name" {
   description = "The name of CloudWatch Logs group to which CloudTrail events are delivered."
   default     = "cloudtrail-multi-region"
@@ -258,8 +308,13 @@ variable "cloudtrail_name" {
   default     = "cloudtrail-multi-region"
 }
 
+variable "cloudtrail_sns_topic_enabled" {
+  description = "Specifies whether the trail is delivered to a SNS topic."
+  default     = true
+}
+
 variable "cloudtrail_sns_topic_name" {
-  description = "The name of the sns topic to link to the trail."
+  description = "The name of the SNS topic to link to the trail."
   default     = "cloudtrail-multi-region-sns-topic"
 }
 
@@ -267,6 +322,12 @@ variable "cloudtrail_s3_key_prefix" {
   description = "The prefix used when CloudTrail delivers events to the S3 bucket."
   default     = "cloudtrail"
 }
+
+variable "cloudtrail_s3_object_level_logging_buckets" {
+  description = "The list of S3 bucket ARNs on which to enable object-level logging."
+  default     = ["arn:aws:s3:::"] # All S3 buckets
+}
+
 
 # --------------------------------------------------------------------------------------------------
 # Variables for alarm-baseline module.
@@ -298,4 +359,30 @@ variable "guardduty_finding_publishing_frequency" {
 variable "guardduty_invitation_message" {
   description = "Message for invitation."
   default     = "This is an automatic invitation message from guardduty-baseline module."
+}
+
+# --------------------------------------------------------------------------------------------------
+# Variables for securityhub-baseline module.
+# --------------------------------------------------------------------------------------------------
+variable "securityhub_enable_cis_standard" {
+  description = "Boolean whether CIS standard is enabled."
+  default     = true
+}
+
+variable "securityhub_enable_pci_dss_standard" {
+  description = "Boolean whether PCI DSS standard is enabled."
+  default     = false
+}
+
+variable "securityhub_enable_aws_foundational_standard" {
+  description = "Boolean whether AWS Foundations standard is enabled."
+  default     = true
+}
+
+# --------------------------------------------------------------------------------------------------
+# Variables for analyzer-baseline module.
+# --------------------------------------------------------------------------------------------------
+variable "analyzer_name" {
+  description = "The name for the IAM Access Analyzer resource to be created."
+  default     = "default-analyer"
 }

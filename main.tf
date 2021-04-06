@@ -14,10 +14,6 @@ module "iam_baseline" {
   source = "./modules/iam-baseline"
 
   aws_account_id                  = var.aws_account_id
-  master_iam_role_name            = var.master_iam_role_name
-  master_iam_role_policy_name     = var.master_iam_role_policy_name
-  manager_iam_role_name           = var.manager_iam_role_name
-  manager_iam_role_policy_name    = var.manager_iam_role_policy_name
   support_iam_role_name           = var.support_iam_role_name
   support_iam_role_policy_name    = var.support_iam_role_policy_name
   support_iam_role_principal_arns = var.support_iam_role_principal_arns
@@ -29,6 +25,8 @@ module "iam_baseline" {
   require_symbols                 = var.require_symbols
   allow_users_to_change_password  = var.allow_users_to_change_password
   max_password_age                = var.max_password_age
+  create_password_policy          = var.create_password_policy
+  create_support_role             = var.create_support_role
 
   tags = var.tags
 }
@@ -42,8 +40,11 @@ module "cloudtrail_baseline" {
 
   enabled                           = local.is_cloudtrail_enabled
   aws_account_id                    = var.aws_account_id
+  cloudtrail_depends_on             = [aws_s3_bucket_policy.audit_log]
   cloudtrail_name                   = var.cloudtrail_name
+  cloudtrail_sns_topic_enabled      = var.cloudtrail_sns_topic_enabled
   cloudtrail_sns_topic_name         = var.cloudtrail_sns_topic_name
+  cloudwatch_logs_enabled           = var.cloudtrail_cloudwatch_logs_enabled
   cloudwatch_logs_group_name        = var.cloudtrail_cloudwatch_logs_group_name
   cloudwatch_logs_retention_in_days = var.cloudwatch_logs_retention_in_days
   iam_role_name                     = var.cloudtrail_iam_role_name
@@ -52,6 +53,7 @@ module "cloudtrail_baseline" {
   region                            = var.region
   s3_bucket_name                    = local.audit_log_bucket_id
   s3_key_prefix                     = var.cloudtrail_s3_key_prefix
+  s3_object_level_logging_buckets   = var.cloudtrail_s3_object_level_logging_buckets
   is_organization_trail             = local.is_master_account
   tags                              = var.tags
 }
@@ -63,18 +65,10 @@ module "cloudtrail_baseline" {
 module "alarm_baseline" {
   source = "./modules/alarm-baseline"
 
-  enabled                   = local.is_cloudtrail_enabled
+  enabled                   = local.is_cloudtrail_enabled && var.cloudtrail_cloudwatch_logs_enabled
   alarm_namespace           = var.alarm_namespace
-  cloudtrail_log_group_name = local.is_cloudtrail_enabled ? module.cloudtrail_baseline.log_group.name : ""
+  cloudtrail_log_group_name = local.is_cloudtrail_enabled ? module.cloudtrail_baseline.log_group : ""
   sns_topic_name            = var.alarm_sns_topic_name
 
   tags = var.tags
-}
-
-# --------------------------------------------------------------------------------------------------
-# SecurityHub Baseline
-# --------------------------------------------------------------------------------------------------
-
-module "securityhub_baseline" {
-  source = "./modules/securityhub-baseline"
 }
