@@ -34,6 +34,7 @@ variable "target_regions" {
   default = [
     "ap-northeast-1",
     "ap-northeast-2",
+    "ap-northeast-3",
     "ap-south-1",
     "ap-southeast-1",
     "ap-southeast-2",
@@ -148,7 +149,7 @@ variable "support_iam_role_principal_arns" {
 
 variable "max_password_age" {
   description = "The number of days that an user password is valid."
-  default     = 90
+  default     = 0
 }
 
 variable "minimum_password_length" {
@@ -163,22 +164,22 @@ variable "password_reuse_prevention" {
 
 variable "require_lowercase_characters" {
   description = "Whether to require lowercase characters for user passwords."
-  default     = true
+  default     = false
 }
 
 variable "require_numbers" {
   description = "Whether to require numbers for user passwords."
-  default     = true
+  default     = false
 }
 
 variable "require_uppercase_characters" {
   description = "Whether to require uppercase characters for user passwords."
-  default     = true
+  default     = false
 }
 
 variable "require_symbols" {
   description = "Whether to require symbols for user passwords."
-  default     = true
+  default     = false
 }
 
 variable "allow_users_to_change_password" {
@@ -189,6 +190,11 @@ variable "allow_users_to_change_password" {
 # --------------------------------------------------------------------------------------------------
 # Variables for vpc-baseline module.
 # --------------------------------------------------------------------------------------------------
+variable "vpc_enable" {
+  description = "Boolean whether the VPC baseline module should be enabled"
+  default     = true
+}
+
 variable "vpc_iam_role_name" {
   description = "The name of the IAM Role which VPC Flow Logs will use."
   default     = "VPC-Flow-Logs-Publisher"
@@ -233,6 +239,10 @@ variable "vpc_flow_logs_s3_key_prefix" {
 # --------------------------------------------------------------------------------------------------
 # Variables for config-baseline module.
 # --------------------------------------------------------------------------------------------------
+variable "config_baseline_enabled" {
+  description = "Boolean whether config-baseline is enabled."
+  default     = true
+}
 
 variable "config_delivery_frequency" {
   description = "The frequency which AWS Config sends a snapshot into the S3 bucket."
@@ -259,6 +269,11 @@ variable "config_sns_topic_name" {
   default     = "ConfigChanges"
 }
 
+variable "config_sns_topic_kms_master_key_id" {
+  description = "To enable SNS Topic encryption enter value with the ID of a custom master KMS key that is used for encryption"
+  default     = null
+}
+
 variable "config_aggregator_name" {
   description = "The name of the organizational AWS Config Configuration Aggregator."
   default     = "organization-aggregator"
@@ -267,6 +282,11 @@ variable "config_aggregator_name" {
 variable "config_aggregator_name_prefix" {
   description = "The prefix of the name for the IAM role attached to the organizational AWS Config Configuration Aggregator."
   default     = "config-for-organization-role"
+}
+
+variable "config_global_resources_all_regions" {
+  description = "Record global resources in all regions. If false, only default region will record global resources."
+  default     = false
 }
 
 # --------------------------------------------------------------------------------------------------
@@ -328,6 +348,15 @@ variable "cloudtrail_s3_object_level_logging_buckets" {
   default     = ["arn:aws:s3:::"] # All S3 buckets
 }
 
+variable "cloudtrail_dynamodb_event_logging_tables" {
+  description = "The list of DynamoDB table ARNs on which to enable event logging."
+  default     = ["arn:aws:dynamodb"] # All DynamoDB tables
+}
+
+variable "cloudtrail_lambda_invocation_logging_lambdas" {
+  description = "The list of lambda ARNs on which to enable invocation logging."
+  default     = ["arn:aws:lambda"] # All lambdas
+}
 
 # --------------------------------------------------------------------------------------------------
 # Variables for alarm-baseline module.
@@ -343,9 +372,94 @@ variable "alarm_sns_topic_name" {
   default     = "CISAlarm"
 }
 
+variable "alarm_sns_topic_kms_master_key_id" {
+  description = "To enable SNS Topic encryption enter value with the ID of a custom master KMS key that is used for encryption"
+  default     = null
+}
+
+variable "unauthorized_api_calls_enabled" {
+  description = "The boolean flag whether the unauthorized_api_calls alarm is enabled or not. No resources are created when set to false."
+  default     = true
+}
+
+variable "no_mfa_console_signin_enabled" {
+  description = "The boolean flag whether the no_mfa_console_signin alarm is enabled or not. No resources are created when set to false."
+  default     = true
+}
+
+variable "root_usage_enabled" {
+  description = "The boolean flag whether the root_usage alarm is enabled or not. No resources are created when set to false."
+  default     = true
+}
+
+variable "iam_changes_enabled" {
+  description = "The boolean flag whether the iam_changes alarm is enabled or not. No resources are created when set to false."
+  default     = true
+}
+
+variable "cloudtrail_cfg_changes_enabled" {
+  description = "The boolean flag whether the cloudtrail_cfg_changes alarm is enabled or not. No resources are created when set to false."
+  default     = true
+}
+
+variable "console_signin_failures_enabled" {
+  description = "The boolean flag whether the console_signin_failures alarm is enabled or not. No resources are created when set to false."
+  default     = true
+}
+
+variable "disable_or_delete_cmk_enabled" {
+  description = "The boolean flag whether the disable_or_delete_cmk alarm is enabled or not. No resources are created when set to false."
+  default     = true
+}
+
+variable "s3_bucket_policy_changes_enabled" {
+  description = "The boolean flag whether the s3_bucket_policy_changes alarm is enabled or not. No resources are created when set to false."
+  default     = true
+}
+
+variable "aws_config_changes_enabled" {
+  description = "The boolean flag whether the aws_config_changes alarm is enabled or not. No resources are created when set to false."
+  default     = true
+}
+
+variable "security_group_changes_enabled" {
+  description = "The boolean flag whether the security_group_changes alarm is enabled or not. No resources are created when set to false."
+  default     = true
+}
+
+variable "nacl_changes_enabled" {
+  description = "The boolean flag whether the nacl_changes alarm is enabled or not. No resources are created when set to false."
+  default     = true
+}
+
+variable "network_gw_changes_enabled" {
+  description = "The boolean flag whether the network_gw_changes alarm is enabled or not. No resources are created when set to false."
+  default     = true
+}
+
+variable "route_table_changes_enabled" {
+  description = "The boolean flag whether the route_table_changes alarm is enabled or not. No resources are created when set to false."
+  default     = true
+}
+
+variable "vpc_changes_enabled" {
+  description = "The boolean flag whether the vpc_changes alarm is enabled or not. No resources are created when set to false."
+  default     = true
+}
+
+variable "organizations_changes_enabled" {
+  description = "The boolean flag whether the organizations_changes alarm is enabled or not. No resources are created when set to false."
+  default     = true
+}
+
 # --------------------------------------------------------------------------------------------------
 # Variables for guardduty-baseline module.
 # --------------------------------------------------------------------------------------------------
+variable "guardduty_enabled" {
+  description = "Boolean whether the guardduty-baseline module is enabled or disabled"
+  default     = true
+}
+
 variable "guardduty_disable_email_notification" {
   description = "Boolean whether an email notification is sent to the accounts."
   default     = false
@@ -362,8 +476,36 @@ variable "guardduty_invitation_message" {
 }
 
 # --------------------------------------------------------------------------------------------------
+# Variables for s3-baseline module.
+# --------------------------------------------------------------------------------------------------
+variable "s3_block_public_acls" {
+  description = "Whether Amazon S3 should block public ACLs for buckets in this account. Defaults to true."
+  default     = true
+}
+
+variable "s3_block_public_policy" {
+  description = "Whether Amazon S3 should block public bucket policies for buckets in this account. Defaults to true."
+  default     = true
+}
+
+variable "s3_ignore_public_acls" {
+  description = "Whether Amazon S3 should ignore public ACLs for buckets in this account. Defaults to true."
+  default     = true
+}
+
+variable "s3_restrict_public_buckets" {
+  description = "Whether Amazon S3 should restrict public bucket policies for buckets in this account. Defaults to true."
+  default     = true
+}
+
+# --------------------------------------------------------------------------------------------------
 # Variables for securityhub-baseline module.
 # --------------------------------------------------------------------------------------------------
+variable "securityhub_enabled" {
+  description = "Boolean whether the securityhub-baseline module is enabled or disabled"
+  default     = true
+}
+
 variable "securityhub_enable_cis_standard" {
   description = "Boolean whether CIS standard is enabled."
   default     = true
@@ -379,10 +521,16 @@ variable "securityhub_enable_aws_foundational_standard" {
   default     = true
 }
 
+variable "securityhub_enable_product_arns" {
+  description = "List of Security Hub product ARNs, `<REGION>` will be replaced. See https://docs.aws.amazon.com/securityhub/latest/userguide/securityhub-partner-providers.html for list."
+  type        = list(string)
+  default     = []
+}
+
 # --------------------------------------------------------------------------------------------------
 # Variables for analyzer-baseline module.
 # --------------------------------------------------------------------------------------------------
 variable "analyzer_name" {
   description = "The name for the IAM Access Analyzer resource to be created."
-  default     = "default-analyer"
+  default     = "default-analyzer"
 }

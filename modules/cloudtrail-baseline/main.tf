@@ -238,8 +238,8 @@ resource "aws_sns_topic_policy" "local-account-cloudtrail" {
 resource "aws_cloudtrail" "global" {
   count = var.enabled ? 1 : 0
 
-  name = var.cloudtrail_name
-  cloud_watch_logs_group_arn    = "${aws_cloudwatch_log_group.cloudtrail_events[0].arn}:*" 
+  name                          = var.cloudtrail_name
+  cloud_watch_logs_group_arn    = "${aws_cloudwatch_log_group.cloudtrail_events[0].arn}:*"
   cloud_watch_logs_role_arn     = aws_iam_role.cloudwatch_delivery[0].arn
   enable_log_file_validation    = true
   include_global_service_events = true
@@ -265,9 +265,18 @@ resource "aws_cloudtrail" "global" {
     include_management_events = true
 
     data_resource {
-      type   = "AWS::S3::Object"
-      values = ["arn:aws:s3:::"]
+      type   = "AWS::DynamoDB::Table"
+      values = var.dynamodb_event_logging_tables
     }
+
+    data_resource {
+      type   = "AWS::Lambda::Function"
+      values = var.lambda_invocation_logging_lambdas
+    }
+  }
+
+  insight_selector {
+    insight_type = "ApiCallRateInsight"
   }
 
   tags = var.tags

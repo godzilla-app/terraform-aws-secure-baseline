@@ -21,6 +21,11 @@ variable "sns_topic_name" {
   default     = "ConfigChanges"
 }
 
+variable "sns_topic_kms_master_key_id" {
+  description = "To enable SNS Topic encryption enter value with the ID of a custom master KMS key that is used for encryption"
+  default     = null
+}
+
 variable "delivery_frequency" {
   description = "The frequency which AWS Config sends a snapshot into the S3 bucket."
   default     = "One_Hour"
