@@ -19,7 +19,7 @@ terraform {
      "aws.us-east-1",
      "aws.us-east-2",
      "aws.us-west-1",
-     "aws.us-west-2
+     "aws.us-west-2"
 	  ]
   }
 }
