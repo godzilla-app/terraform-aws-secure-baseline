@@ -26,6 +26,9 @@ resource "aws_securityhub_member" "members" {
   account_id = var.member_accounts[count.index].account_id
   email      = var.member_accounts[count.index].email
   invite     = true
+  lifecycle {
+    ignore_changes = [email]
+  }
 }
 
 resource "aws_securityhub_invite_accepter" "invitee" {
