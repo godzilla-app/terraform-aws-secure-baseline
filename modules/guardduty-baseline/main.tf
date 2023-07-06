@@ -25,6 +25,9 @@ resource "aws_guardduty_member" "members" {
   disable_email_notification = var.disable_email_notification
   email                      = var.member_accounts[count.index].email
   invitation_message         = var.invitation_message
+  lifecycle {
+    ignore_changes = [email]
+  }
 }
 
 resource "aws_guardduty_invite_accepter" "master" {
