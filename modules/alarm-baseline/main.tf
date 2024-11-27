@@ -1,13 +1,38 @@
+data "aws_caller_identity" "current" {}
+data "aws_region" "current" {}
+
 # --------------------------------------------------------------------------------------------------
 # The SNS topic to which CloudWatch alarms send events.
 # --------------------------------------------------------------------------------------------------
 
 resource "aws_sns_topic" "alarms" {
-  count = var.enabled ? 1 : 0
-
-  name = var.sns_topic_name
+  name              = var.sns_topic_name
+  kms_master_key_id = var.sns_topic_kms_master_key_id
 
   tags = var.tags
+}
+
+resource "aws_sns_topic_policy" "alarms" {
+  arn    = aws_sns_topic.alarms.arn
+  policy = data.aws_iam_policy_document.alarms-sns-policy.json
+}
+
+data "aws_iam_policy_document" "alarms-sns-policy" {
+  statement {
+    actions   = ["sns:Publish"]
+    resources = [aws_sns_topic.alarms.arn]
+
+    principals {
+      type        = "Service"
+      identifiers = ["cloudwatch.amazonaws.com"]
+    }
+
+    condition {
+      test     = "ArnLike"
+      variable = "AWS:SourceArn"
+      values   = ["arn:aws:cloudwatch:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:alarm:*"]
+    }
+  }
 }
 
 # --------------------------------------------------------------------------------------------------
@@ -15,10 +40,10 @@ resource "aws_sns_topic" "alarms" {
 # --------------------------------------------------------------------------------------------------
 
 resource "aws_cloudwatch_log_metric_filter" "unauthorized_api_calls" {
-  count = var.enabled && var.unauthorized_api_calls_enabled ? 1 : 0
+  count = var.unauthorized_api_calls_enabled ? 1 : 0
 
   name           = "UnauthorizedAPICalls"
-  pattern        = "{ ($.errorCode = \"*UnauthorizedOperation\") || ($.errorCode = \"AccessDenied*\") }"
+  pattern        = "{(($.errorCode = \"*UnauthorizedOperation\") || ($.errorCode = \"AccessDenied*\")) && (($.sourceIPAddress!=\"delivery.logs.amazonaws.com\") && ($.eventName!=\"HeadBucket\"))}"
   log_group_name = var.cloudtrail_log_group_name
 
   metric_transformation {
@@ -29,7 +54,7 @@ resource "aws_cloudwatch_log_metric_filter" "unauthorized_api_calls" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "unauthorized_api_calls" {
-  count = var.enabled && var.unauthorized_api_calls_enabled ? 1 : 0
+  count = var.unauthorized_api_calls_enabled ? 1 : 0
 
   alarm_name                = "UnauthorizedAPICalls"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
@@ -40,7 +65,7 @@ resource "aws_cloudwatch_metric_alarm" "unauthorized_api_calls" {
   statistic                 = "Sum"
   threshold                 = "1"
   alarm_description         = "Monitoring unauthorized API calls will help reveal application errors and may reduce time to detect malicious activity."
-  alarm_actions             = [aws_sns_topic.alarms[0].arn]
+  alarm_actions             = [aws_sns_topic.alarms.arn]
   treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
 
@@ -48,10 +73,13 @@ resource "aws_cloudwatch_metric_alarm" "unauthorized_api_calls" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "no_mfa_console_signin" {
-  count = var.enabled && var.no_mfa_console_signin_enabled ? 1 : 0
+  count = var.no_mfa_console_signin_enabled ? 1 : 0
 
-  name           = "NoMFAConsoleSignin"
-  pattern        = "{ ($.eventName = \"ConsoleLogin\") && ($.additionalEventData.MFAUsed != \"Yes\") }"
+  name = "NoMFAConsoleSignin"
+  pattern = join(" ", [
+    "{ ($.eventName = \"ConsoleLogin\") && ($.additionalEventData.MFAUsed != \"Yes\")",
+    var.mfa_console_signin_allow_sso ? "&& ($.userIdentity.type = \"IAMUser\") && ($.responseElements.ConsoleLogin = \"Success\") }" : "}",
+  ])
   log_group_name = var.cloudtrail_log_group_name
 
   metric_transformation {
@@ -62,7 +90,7 @@ resource "aws_cloudwatch_log_metric_filter" "no_mfa_console_signin" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "no_mfa_console_signin" {
-  count = var.enabled && var.no_mfa_console_signin_enabled ? 1 : 0
+  count = var.no_mfa_console_signin_enabled ? 1 : 0
 
   alarm_name                = "NoMFAConsoleSignin"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
@@ -73,7 +101,7 @@ resource "aws_cloudwatch_metric_alarm" "no_mfa_console_signin" {
   statistic                 = "Sum"
   threshold                 = "1"
   alarm_description         = "Monitoring for single-factor console logins will increase visibility into accounts that are not protected by MFA."
-  alarm_actions             = [aws_sns_topic.alarms[0].arn]
+  alarm_actions             = [aws_sns_topic.alarms.arn]
   treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
 
@@ -81,7 +109,7 @@ resource "aws_cloudwatch_metric_alarm" "no_mfa_console_signin" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "root_usage" {
-  count = var.enabled && var.root_usage_enabled ? 1 : 0
+  count = var.root_usage_enabled ? 1 : 0
 
   name           = "RootUsage"
   pattern        = "{ $.userIdentity.type = \"Root\" && $.userIdentity.invokedBy NOT EXISTS && $.eventType != \"AwsServiceEvent\" }"
@@ -95,7 +123,7 @@ resource "aws_cloudwatch_log_metric_filter" "root_usage" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "root_usage" {
-  count = var.enabled && var.root_usage_enabled ? 1 : 0
+  count = var.root_usage_enabled ? 1 : 0
 
   alarm_name                = "RootUsage"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
@@ -106,7 +134,7 @@ resource "aws_cloudwatch_metric_alarm" "root_usage" {
   statistic                 = "Sum"
   threshold                 = "1"
   alarm_description         = "Monitoring for root account logins will provide visibility into the use of a fully privileged account and an opportunity to reduce the use of it."
-  alarm_actions             = [aws_sns_topic.alarms[0].arn]
+  alarm_actions             = [aws_sns_topic.alarms.arn]
   treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
 
@@ -114,7 +142,7 @@ resource "aws_cloudwatch_metric_alarm" "root_usage" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "iam_changes" {
-  count = var.enabled && var.iam_changes_enabled ? 1 : 0
+  count = var.iam_changes_enabled ? 1 : 0
 
   name           = "IAMChanges"
   pattern        = "{($.eventName=DeleteGroupPolicy)||($.eventName=DeleteRolePolicy)||($.eventName=DeleteUserPolicy)||($.eventName=PutGroupPolicy)||($.eventName=PutRolePolicy)||($.eventName=PutUserPolicy)||($.eventName=CreatePolicy)||($.eventName=DeletePolicy)||($.eventName=CreatePolicyVersion)||($.eventName=DeletePolicyVersion)||($.eventName=AttachRolePolicy)||($.eventName=DetachRolePolicy)||($.eventName=AttachUserPolicy)||($.eventName=DetachUserPolicy)||($.eventName=AttachGroupPolicy)||($.eventName=DetachGroupPolicy)}"
@@ -128,7 +156,7 @@ resource "aws_cloudwatch_log_metric_filter" "iam_changes" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "iam_changes" {
-  count = var.enabled && var.iam_changes_enabled ? 1 : 0
+  count = var.iam_changes_enabled ? 1 : 0
 
   alarm_name                = "IAMChanges"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
@@ -139,7 +167,7 @@ resource "aws_cloudwatch_metric_alarm" "iam_changes" {
   statistic                 = "Sum"
   threshold                 = "1"
   alarm_description         = "Monitoring changes to IAM policies will help ensure authentication and authorization controls remain intact."
-  alarm_actions             = [aws_sns_topic.alarms[0].arn]
+  alarm_actions             = [aws_sns_topic.alarms.arn]
   treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
 
@@ -147,7 +175,7 @@ resource "aws_cloudwatch_metric_alarm" "iam_changes" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "cloudtrail_cfg_changes" {
-  count = var.enabled && var.cloudtrail_cfg_changes_enabled ? 1 : 0
+  count = var.cloudtrail_cfg_changes_enabled ? 1 : 0
 
   name           = "CloudTrailCfgChanges"
   pattern        = "{ ($.eventName = CreateTrail) || ($.eventName = UpdateTrail) || ($.eventName = DeleteTrail) || ($.eventName = StartLogging) || ($.eventName = StopLogging) }"
@@ -161,7 +189,7 @@ resource "aws_cloudwatch_log_metric_filter" "cloudtrail_cfg_changes" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "cloudtrail_cfg_changes" {
-  count = var.enabled && var.cloudtrail_cfg_changes_enabled ? 1 : 0
+  count = var.cloudtrail_cfg_changes_enabled ? 1 : 0
 
   alarm_name                = "CloudTrailCfgChanges"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
@@ -172,7 +200,7 @@ resource "aws_cloudwatch_metric_alarm" "cloudtrail_cfg_changes" {
   statistic                 = "Sum"
   threshold                 = "1"
   alarm_description         = "Monitoring changes to CloudTrail's configuration will help ensure sustained visibility to activities performed in the AWS account."
-  alarm_actions             = [aws_sns_topic.alarms[0].arn]
+  alarm_actions             = [aws_sns_topic.alarms.arn]
   treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
 
@@ -180,7 +208,7 @@ resource "aws_cloudwatch_metric_alarm" "cloudtrail_cfg_changes" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "console_signin_failures" {
-  count = var.enabled && var.console_signin_failures_enabled ? 1 : 0
+  count = var.console_signin_failures_enabled ? 1 : 0
 
   name           = "ConsoleSigninFailures"
   pattern        = "{ ($.eventName = ConsoleLogin) && ($.errorMessage = \"Failed authentication\") }"
@@ -194,7 +222,7 @@ resource "aws_cloudwatch_log_metric_filter" "console_signin_failures" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "console_signin_failures" {
-  count = var.enabled && var.console_signin_failures_enabled ? 1 : 0
+  count = var.console_signin_failures_enabled ? 1 : 0
 
   alarm_name                = "ConsoleSigninFailures"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
@@ -205,7 +233,7 @@ resource "aws_cloudwatch_metric_alarm" "console_signin_failures" {
   statistic                 = "Sum"
   threshold                 = "1"
   alarm_description         = "Monitoring failed console logins may decrease lead time to detect an attempt to brute force a credential, which may provide an indicator, such as source IP, that can be used in other event correlation."
-  alarm_actions             = [aws_sns_topic.alarms[0].arn]
+  alarm_actions             = [aws_sns_topic.alarms.arn]
   treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
 
@@ -213,7 +241,7 @@ resource "aws_cloudwatch_metric_alarm" "console_signin_failures" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "disable_or_delete_cmk" {
-  count = var.enabled && var.disable_or_delete_cmk_enabled ? 1 : 0
+  count = var.disable_or_delete_cmk_enabled ? 1 : 0
 
   name           = "DisableOrDeleteCMK"
   pattern        = "{ ($.eventSource = kms.amazonaws.com) && (($.eventName = DisableKey) || ($.eventName = ScheduleKeyDeletion)) }"
@@ -227,7 +255,7 @@ resource "aws_cloudwatch_log_metric_filter" "disable_or_delete_cmk" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "disable_or_delete_cmk" {
-  count = var.enabled && var.disable_or_delete_cmk_enabled ? 1 : 0
+  count = var.disable_or_delete_cmk_enabled ? 1 : 0
 
   alarm_name                = "DisableOrDeleteCMK"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
@@ -238,7 +266,7 @@ resource "aws_cloudwatch_metric_alarm" "disable_or_delete_cmk" {
   statistic                 = "Sum"
   threshold                 = "1"
   alarm_description         = "Monitoring failed console logins may decrease lead time to detect an attempt to brute force a credential, which may provide an indicator, such as source IP, that can be used in other event correlation."
-  alarm_actions             = [aws_sns_topic.alarms[0].arn]
+  alarm_actions             = [aws_sns_topic.alarms.arn]
   treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
 
@@ -246,7 +274,7 @@ resource "aws_cloudwatch_metric_alarm" "disable_or_delete_cmk" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "s3_bucket_policy_changes" {
-  count = var.enabled && var.s3_bucket_policy_changes_enabled ? 1 : 0
+  count = var.s3_bucket_policy_changes_enabled ? 1 : 0
 
   name           = "S3BucketPolicyChanges"
   pattern        = "{ ($.eventSource = s3.amazonaws.com) && (($.eventName = PutBucketAcl) || ($.eventName = PutBucketPolicy) || ($.eventName = PutBucketCors) || ($.eventName = PutBucketLifecycle) || ($.eventName = PutBucketReplication) || ($.eventName = DeleteBucketPolicy) || ($.eventName = DeleteBucketCors) || ($.eventName = DeleteBucketLifecycle) || ($.eventName = DeleteBucketReplication)) }"
@@ -260,7 +288,7 @@ resource "aws_cloudwatch_log_metric_filter" "s3_bucket_policy_changes" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "s3_bucket_policy_changes" {
-  count = var.enabled && var.s3_bucket_policy_changes_enabled ? 1 : 0
+  count = var.s3_bucket_policy_changes_enabled ? 1 : 0
 
   alarm_name                = "S3BucketPolicyChanges"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
@@ -271,7 +299,7 @@ resource "aws_cloudwatch_metric_alarm" "s3_bucket_policy_changes" {
   statistic                 = "Sum"
   threshold                 = "1"
   alarm_description         = "Monitoring changes to S3 bucket policies may reduce time to detect and correct permissive policies on sensitive S3 buckets."
-  alarm_actions             = [aws_sns_topic.alarms[0].arn]
+  alarm_actions             = [aws_sns_topic.alarms.arn]
   treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
 
@@ -279,7 +307,7 @@ resource "aws_cloudwatch_metric_alarm" "s3_bucket_policy_changes" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "aws_config_changes" {
-  count = var.enabled && var.aws_config_changes_enabled ? 1 : 0
+  count = var.aws_config_changes_enabled ? 1 : 0
 
   name           = "AWSConfigChanges"
   pattern        = "{ ($.eventSource = config.amazonaws.com) && (($.eventName=StopConfigurationRecorder)||($.eventName=DeleteDeliveryChannel)||($.eventName=PutDeliveryChannel)||($.eventName=PutConfigurationRecorder)) }"
@@ -293,7 +321,7 @@ resource "aws_cloudwatch_log_metric_filter" "aws_config_changes" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "aws_config_changes" {
-  count = var.enabled && var.aws_config_changes_enabled ? 1 : 0
+  count = var.aws_config_changes_enabled ? 1 : 0
 
   alarm_name                = "AWSConfigChanges"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
@@ -304,7 +332,7 @@ resource "aws_cloudwatch_metric_alarm" "aws_config_changes" {
   statistic                 = "Sum"
   threshold                 = "1"
   alarm_description         = "Monitoring changes to AWS Config configuration will help ensure sustained visibility of configuration items within the AWS account."
-  alarm_actions             = [aws_sns_topic.alarms[0].arn]
+  alarm_actions             = [aws_sns_topic.alarms.arn]
   treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
 
@@ -312,7 +340,7 @@ resource "aws_cloudwatch_metric_alarm" "aws_config_changes" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "security_group_changes" {
-  count = var.enabled && var.security_group_changes_enabled ? 1 : 0
+  count = var.security_group_changes_enabled ? 1 : 0
 
   name           = "SecurityGroupChanges"
   pattern        = "{ ($.eventName = AuthorizeSecurityGroupIngress) || ($.eventName = AuthorizeSecurityGroupEgress) || ($.eventName = RevokeSecurityGroupIngress) || ($.eventName = RevokeSecurityGroupEgress) || ($.eventName = CreateSecurityGroup) || ($.eventName = DeleteSecurityGroup)}"
@@ -326,7 +354,7 @@ resource "aws_cloudwatch_log_metric_filter" "security_group_changes" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "security_group_changes" {
-  count = var.enabled && var.security_group_changes_enabled ? 1 : 0
+  count = var.security_group_changes_enabled ? 1 : 0
 
   alarm_name                = "SecurityGroupChanges"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
@@ -337,7 +365,7 @@ resource "aws_cloudwatch_metric_alarm" "security_group_changes" {
   statistic                 = "Sum"
   threshold                 = "1"
   alarm_description         = "Monitoring changes to security group will help ensure that resources and services are not unintentionally exposed."
-  alarm_actions             = [aws_sns_topic.alarms[0].arn]
+  alarm_actions             = [aws_sns_topic.alarms.arn]
   treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
 
@@ -345,7 +373,7 @@ resource "aws_cloudwatch_metric_alarm" "security_group_changes" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "nacl_changes" {
-  count = var.enabled && var.nacl_changes_enabled ? 1 : 0
+  count = var.nacl_changes_enabled ? 1 : 0
 
   name           = "NACLChanges"
   pattern        = "{ ($.eventName = CreateNetworkAcl) || ($.eventName = CreateNetworkAclEntry) || ($.eventName = DeleteNetworkAcl) || ($.eventName = DeleteNetworkAclEntry) || ($.eventName = ReplaceNetworkAclEntry) || ($.eventName = ReplaceNetworkAclAssociation) }"
@@ -359,7 +387,7 @@ resource "aws_cloudwatch_log_metric_filter" "nacl_changes" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "nacl_changes" {
-  count = var.enabled && var.nacl_changes_enabled ? 1 : 0
+  count = var.nacl_changes_enabled ? 1 : 0
 
   alarm_name                = "NACLChanges"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
@@ -370,7 +398,7 @@ resource "aws_cloudwatch_metric_alarm" "nacl_changes" {
   statistic                 = "Sum"
   threshold                 = "1"
   alarm_description         = "Monitoring changes to NACLs will help ensure that AWS resources and services are not unintentionally exposed."
-  alarm_actions             = [aws_sns_topic.alarms[0].arn]
+  alarm_actions             = [aws_sns_topic.alarms.arn]
   treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
 
@@ -378,7 +406,7 @@ resource "aws_cloudwatch_metric_alarm" "nacl_changes" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "network_gw_changes" {
-  count = var.enabled && var.network_gw_changes_enabled ? 1 : 0
+  count = var.network_gw_changes_enabled ? 1 : 0
 
   name           = "NetworkGWChanges"
   pattern        = "{ ($.eventName = CreateCustomerGateway) || ($.eventName = DeleteCustomerGateway) || ($.eventName = AttachInternetGateway) || ($.eventName = CreateInternetGateway) || ($.eventName = DeleteInternetGateway) || ($.eventName = DetachInternetGateway) }"
@@ -392,7 +420,7 @@ resource "aws_cloudwatch_log_metric_filter" "network_gw_changes" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "network_gw_changes" {
-  count = var.enabled && var.network_gw_changes_enabled ? 1 : 0
+  count = var.network_gw_changes_enabled ? 1 : 0
 
   alarm_name                = "NetworkGWChanges"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
@@ -403,7 +431,7 @@ resource "aws_cloudwatch_metric_alarm" "network_gw_changes" {
   statistic                 = "Sum"
   threshold                 = "1"
   alarm_description         = "Monitoring changes to network gateways will help ensure that all ingress/egress traffic traverses the VPC border via a controlled path."
-  alarm_actions             = [aws_sns_topic.alarms[0].arn]
+  alarm_actions             = [aws_sns_topic.alarms.arn]
   treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
 
@@ -411,7 +439,7 @@ resource "aws_cloudwatch_metric_alarm" "network_gw_changes" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "route_table_changes" {
-  count = var.enabled && var.route_table_changes_enabled ? 1 : 0
+  count = var.route_table_changes_enabled ? 1 : 0
 
   name           = "RouteTableChanges"
   pattern        = "{ ($.eventName = CreateRoute) || ($.eventName = CreateRouteTable) || ($.eventName = ReplaceRoute) || ($.eventName = ReplaceRouteTableAssociation) || ($.eventName = DeleteRouteTable) || ($.eventName = DeleteRoute) || ($.eventName = DisassociateRouteTable) }"
@@ -425,7 +453,7 @@ resource "aws_cloudwatch_log_metric_filter" "route_table_changes" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "route_table_changes" {
-  count = var.enabled && var.route_table_changes_enabled ? 1 : 0
+  count = var.route_table_changes_enabled ? 1 : 0
 
   alarm_name                = "RouteTableChanges"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
@@ -436,7 +464,7 @@ resource "aws_cloudwatch_metric_alarm" "route_table_changes" {
   statistic                 = "Sum"
   threshold                 = "1"
   alarm_description         = "Monitoring changes to route tables will help ensure that all VPC traffic flows through an expected path."
-  alarm_actions             = [aws_sns_topic.alarms[0].arn]
+  alarm_actions             = [aws_sns_topic.alarms.arn]
   treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
 
@@ -444,7 +472,7 @@ resource "aws_cloudwatch_metric_alarm" "route_table_changes" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "vpc_changes" {
-  count = var.enabled && var.vpc_changes_enabled ? 1 : 0
+  count = var.vpc_changes_enabled ? 1 : 0
 
   name           = "VPCChanges"
   pattern        = "{ ($.eventName = CreateVpc) || ($.eventName = DeleteVpc) || ($.eventName = ModifyVpcAttribute) || ($.eventName = AcceptVpcPeeringConnection) || ($.eventName = CreateVpcPeeringConnection) || ($.eventName = DeleteVpcPeeringConnection) || ($.eventName = RejectVpcPeeringConnection) || ($.eventName = AttachClassicLinkVpc) || ($.eventName = DetachClassicLinkVpc) || ($.eventName = DisableVpcClassicLink) || ($.eventName = EnableVpcClassicLink) }"
@@ -458,7 +486,7 @@ resource "aws_cloudwatch_log_metric_filter" "vpc_changes" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "vpc_changes" {
-  count = var.enabled && var.vpc_changes_enabled ? 1 : 0
+  count = var.vpc_changes_enabled ? 1 : 0
 
   alarm_name                = "VPCChanges"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
@@ -469,7 +497,7 @@ resource "aws_cloudwatch_metric_alarm" "vpc_changes" {
   statistic                 = "Sum"
   threshold                 = "1"
   alarm_description         = "Monitoring changes to VPC will help ensure that all VPC traffic flows through an expected path."
-  alarm_actions             = [aws_sns_topic.alarms[0].arn]
+  alarm_actions             = [aws_sns_topic.alarms.arn]
   treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
 
@@ -477,7 +505,7 @@ resource "aws_cloudwatch_metric_alarm" "vpc_changes" {
 }
 
 resource "aws_cloudwatch_log_metric_filter" "organizations_changes" {
-  count = var.enabled && var.organizations_changes_enabled ? 1 : 0
+  count = var.organizations_changes_enabled ? 1 : 0
 
   name           = "OrganizationsChanges"
   pattern        = "{ ($.eventSource = organizations.amazonaws.com) && (($.eventName = \"AcceptHandshake\") || ($.eventName = \"AttachPolicy\") || ($.eventName = \"CreateAccount\") || ($.eventName = \"CreateOrganizationalUnit\") || ($.eventName= \"CreatePolicy\") || ($.eventName = \"DeclineHandshake\") || ($.eventName = \"DeleteOrganization\") || ($.eventName = \"DeleteOrganizationalUnit\") || ($.eventName = \"DeletePolicy\") || ($.eventName = \"DetachPolicy\") || ($.eventName = \"DisablePolicyType\") || ($.eventName = \"EnablePolicyType\") || ($.eventName = \"InviteAccountToOrganization\") || ($.eventName = \"LeaveOrganization\") || ($.eventName = \"MoveAccount\") || ($.eventName = \"RemoveAccountFromOrganization\") || ($.eventName = \"UpdatePolicy\") || ($.eventName =\"UpdateOrganizationalUnit\")) }"
@@ -491,7 +519,7 @@ resource "aws_cloudwatch_log_metric_filter" "organizations_changes" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "organizations_changes" {
-  count = var.enabled && var.organizations_changes_enabled ? 1 : 0
+  count = var.organizations_changes_enabled ? 1 : 0
 
   alarm_name                = "OrganizationsChanges"
   comparison_operator       = "GreaterThanOrEqualToThreshold"
@@ -502,7 +530,7 @@ resource "aws_cloudwatch_metric_alarm" "organizations_changes" {
   statistic                 = "Sum"
   threshold                 = "1"
   alarm_description         = "Monitoring AWS Organizations changes can help you prevent any unwanted, accidental or intentional modifications that may lead to unauthorized access or other security breaches."
-  alarm_actions             = [aws_sns_topic.alarms[0].arn]
+  alarm_actions             = [aws_sns_topic.alarms.arn]
   treat_missing_data        = "notBreaching"
   insufficient_data_actions = []
 

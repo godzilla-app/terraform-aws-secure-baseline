@@ -1,5 +1,195 @@
-<a name="unreleased"></a>
-## [Unreleased]
+# Changelog
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [2.1.0](https://github.com/nozaq/terraform-aws-secure-baseline/compare/v2.0.0...v2.1.0) (2022-12-03)
+
+
+### Features
+
+* enable CIS benchmark v1.4.0 standard ([#308](https://github.com/nozaq/terraform-aws-secure-baseline/issues/308)) ([bb724cd](https://github.com/nozaq/terraform-aws-secure-baseline/commit/bb724cd7783ae3e645cbbb4468b367fc5095cb53))
+* make audit log bucket access logs bucket name customizable ([#303](https://github.com/nozaq/terraform-aws-secure-baseline/issues/303)) ([07dc101](https://github.com/nozaq/terraform-aws-secure-baseline/commit/07dc101179fa2d1649cd987e3d8f3d269db546b8))
+
+## [2.0.0](https://github.com/nozaq/terraform-aws-secure-baseline/compare/v1.1.0...v2.0.0) (2022-06-05)
+
+
+### ⚠ BREAKING CHANGES
+
+* this change disables glacier transition rules by default since transitioning small objects is officially not recommended. it can be enabled by setting `var.audit_log_lifecycle_glacier_transition_days` to a positive number.
+
+### Features
+
+* add permissions boundaries for IAM entities support ([#288](https://github.com/nozaq/terraform-aws-secure-baseline/issues/288)) ([219f003](https://github.com/nozaq/terraform-aws-secure-baseline/commit/219f0032626a793b1c7ca304793d924b829b2c18))
+* make glacier transition rules optional ([#293](https://github.com/nozaq/terraform-aws-secure-baseline/issues/293)) ([f0cdf3e](https://github.com/nozaq/terraform-aws-secure-baseline/commit/f0cdf3e6294a97ef455cf5e313aba14bfba38467))
+
+## [1.1.0](https://github.com/nozaq/terraform-aws-secure-baseline/compare/v1.0.1...v1.1.0) (2022-04-16)
+
+
+### Features
+
+* use S3 lifecycle rule V2 ([#285](https://github.com/nozaq/terraform-aws-secure-baseline/issues/285)) ([2b471bd](https://github.com/nozaq/terraform-aws-secure-baseline/commit/2b471bd321f3f7503690076d9321aeca38401796))
+
+
+### Bug Fixes
+
+* upgrade the AWS provider to v4.3 ([#287](https://github.com/nozaq/terraform-aws-secure-baseline/issues/287)) ([271d99e](https://github.com/nozaq/terraform-aws-secure-baseline/commit/271d99ef6206fab0886f6961674340e986b5bc0c))
+
+## [1.0.1](https://github.com/nozaq/terraform-aws-secure-baseline/compare/v1.0.0...v1.0.1) (2022-03-06)
+### Bug Fixes
+- avoid for_each key error ([#273](https://github.com/nozaq/terraform-aws-secure-baseline/issues/273)) ([0122d6f](https://github.com/nozaq/terraform-aws-secure-baseline/commit/0122d6fcd00ecd1114a2d5e7853027ebb0322d71))
+- mark `var.member_accounts` required ([#272](https://github.com/nozaq/terraform-aws-secure-baseline/issues/272)) ([8612941](https://github.com/nozaq/terraform-aws-secure-baseline/commit/8612941317db8c5f3eb82fd8c5218b8ef5a5d41f))
+
+## [1.0.0] - 2022-02-19
+### Feat
+- add new S3 bucket configuration resources ([#261](https://github.com/nozaq/terraform-aws-secure-baseline/issues/261))
+- allow use of organization trail to be toggled via variable ([#259](https://github.com/nozaq/terraform-aws-secure-baseline/issues/259))
+
+### Fix
+- require AWS provider v4.2.0 ([#270](https://github.com/nozaq/terraform-aws-secure-baseline/issues/270))
+- require AWS provider v4.1.0 ([#268](https://github.com/nozaq/terraform-aws-secure-baseline/issues/268))
+- the condition to use the organization trail ([#265](https://github.com/nozaq/terraform-aws-secure-baseline/issues/265))
+- use count instead of `var.enabled` ([#262](https://github.com/nozaq/terraform-aws-secure-baseline/issues/262))
+
+### Refactor
+- remove `destination_options` ([#267](https://github.com/nozaq/terraform-aws-secure-baseline/issues/267))
+- explicitly define a format for FlowLogs ([#264](https://github.com/nozaq/terraform-aws-secure-baseline/issues/264))
+- replace deprecated arguments ([#263](https://github.com/nozaq/terraform-aws-secure-baseline/issues/263))
+
+### BREAKING CHANGE
+
+resources regarding S3 bucket configurations need manual import
+after upgrade. See `docs/upgrade-1.0.md` for guidance.
+
+
+<a name="0.34.0"></a>
+## [0.34.0] - 2022-01-22
+### Feat
+- automatically accepts invite from the master ([#256](https://github.com/nozaq/terraform-aws-secure-baseline/issues/256))
+- enforce strong password policy by default ([#252](https://github.com/nozaq/terraform-aws-secure-baseline/issues/252))
+
+### Fix
+- no findings aggregator for member accounts ([#257](https://github.com/nozaq/terraform-aws-secure-baseline/issues/257))
+- set the minimum terraform version to 1.1.4 ([#255](https://github.com/nozaq/terraform-aws-secure-baseline/issues/255))
+- upgrade minimum provider requirements ([#248](https://github.com/nozaq/terraform-aws-secure-baseline/issues/248))
+
+
+<a name="0.33.0"></a>
+## [0.33.0] - 2022-01-10
+### Refactor
+- add tflint checks ([#246](https://github.com/nozaq/terraform-aws-secure-baseline/issues/246))
+- re-organize locals ([#243](https://github.com/nozaq/terraform-aws-secure-baseline/issues/243))
+
+
+<a name="0.32.0"></a>
+## [0.32.0] - 2022-01-08
+### Feat
+- enable finding aggregator in the main region ([#241](https://github.com/nozaq/terraform-aws-secure-baseline/issues/241))
+
+
+<a name="0.31.0"></a>
+## [0.31.0] - 2022-01-08
+### Feat
+- add inputs to toggle submodules ([#240](https://github.com/nozaq/terraform-aws-secure-baseline/issues/240))
+- optionally ignore SSO logins for MFA alarms ([#234](https://github.com/nozaq/terraform-aws-secure-baseline/issues/234))
+- apply default subnet changes to existing subnets ([#237](https://github.com/nozaq/terraform-aws-secure-baseline/issues/237))
+
+### Fix
+- use CIS recommended filter pattern ([#239](https://github.com/nozaq/terraform-aws-secure-baseline/issues/239))
+- remove `aws_default_vpc` dependency ([#238](https://github.com/nozaq/terraform-aws-secure-baseline/issues/238))
+
+### Refactor
+- use module count instead of having ennabled variable in each submodule. ([#195](https://github.com/nozaq/terraform-aws-secure-baseline/issues/195))
+
+
+<a name="0.30.0"></a>
+## [0.30.0] - 2021-11-23
+### Feat
+- add S3 bucket key support ([#236](https://github.com/nozaq/terraform-aws-secure-baseline/issues/236))
+
+### Fix
+- the minimum required version of the AWS provider ([#227](https://github.com/nozaq/terraform-aws-secure-baseline/issues/227))
+
+
+<a name="0.29.2"></a>
+## [0.29.2] - 2021-09-18
+
+<a name="0.29.1"></a>
+## [0.29.1] - 2021-09-18
+### Fix
+- make `sns_topic_kms_master_key_id` optional ([#219](https://github.com/nozaq/terraform-aws-secure-baseline/issues/219))
+
+
+<a name="0.29.0"></a>
+## [0.29.0] - 2021-09-17
+### Feat
+- add kms_master_key_id to alarm baseline and config-baseline module ([#216](https://github.com/nozaq/terraform-aws-secure-baseline/issues/216))
+
+
+<a name="0.28.0"></a>
+## [0.28.0] - 2021-09-11
+### Feat
+- GuardDuty: Enable S3 events sources ([#209](https://github.com/nozaq/terraform-aws-secure-baseline/issues/209))
+- add support for logging dynamodb events ([#207](https://github.com/nozaq/terraform-aws-secure-baseline/issues/207))
+- add in support to enable 3rd party products ([#206](https://github.com/nozaq/terraform-aws-secure-baseline/issues/206))
+- adds lambda function invocation logging ([#205](https://github.com/nozaq/terraform-aws-secure-baseline/issues/205))
+- add a flag to toggle Security Hub ([#201](https://github.com/nozaq/terraform-aws-secure-baseline/issues/201))
+
+### Fix
+- do not manage `datasources` in member accounts. ([#215](https://github.com/nozaq/terraform-aws-secure-baseline/issues/215))
+- adjust passwort policy to match CIS 1.3+ ([#214](https://github.com/nozaq/terraform-aws-secure-baseline/issues/214))
+- adjust filter pattern for unauthorized_api_calls alarm ([#212](https://github.com/nozaq/terraform-aws-secure-baseline/issues/212))
+- adjust passwort policy to match CIS 1.3+ ([#213](https://github.com/nozaq/terraform-aws-secure-baseline/issues/213))
+- typo ([#203](https://github.com/nozaq/terraform-aws-secure-baseline/issues/203))
+
+
+<a name="0.27.1"></a>
+## [0.27.1] - 2021-07-03
+### Fix
+- when VPC is disabled, disable vpc logging for it ([#197](https://github.com/nozaq/terraform-aws-secure-baseline/issues/197))
+
+
+<a name="0.27.0"></a>
+## [0.27.0] - 2021-06-27
+### Feat
+- add flag for disabling config-baseline ([#190](https://github.com/nozaq/terraform-aws-secure-baseline/issues/190))
+
+### Fix
+- is_enabled flag with ap-northeast-3 ([#192](https://github.com/nozaq/terraform-aws-secure-baseline/issues/192))
+
+### Refactor
+- define `configuration_aliases` ([#196](https://github.com/nozaq/terraform-aws-secure-baseline/issues/196))
+- use `one` instead of `join` to pick the first element ([#194](https://github.com/nozaq/terraform-aws-secure-baseline/issues/194))
+
+
+<a name="0.26.0"></a>
+## [0.26.0] - 2021-06-06
+### Feat
+- disable automatic public ip assignments in default subnets ([#189](https://github.com/nozaq/terraform-aws-secure-baseline/issues/189))
+- enable S3 account-level public block ([#188](https://github.com/nozaq/terraform-aws-secure-baseline/issues/188))
+- add functionality to manually enable/disable guardduty-baseline module ([#183](https://github.com/nozaq/terraform-aws-secure-baseline/issues/183))
+- enable Insights event logging by default ([#185](https://github.com/nozaq/terraform-aws-secure-baseline/issues/185))
+- add cloudtrail insight selector type specification ([#180](https://github.com/nozaq/terraform-aws-secure-baseline/issues/180))
+- add vpc_enable variable ([#170](https://github.com/nozaq/terraform-aws-secure-baseline/issues/170))
+- add/enable ap-northeast-3 (Osaka) region ([#177](https://github.com/nozaq/terraform-aws-secure-baseline/issues/177))
+
+### Fix
+- allow alarm variables to be set at top level module ([#178](https://github.com/nozaq/terraform-aws-secure-baseline/issues/178))
+
+
+<a name="0.24.0"></a>
+## [0.24.0] - 2021-04-25
+### Feat
+- add flag to allow recording global resources in all regions ([#168](https://github.com/nozaq/terraform-aws-secure-baseline/issues/168))
+- enable access analyzer for org ([#167](https://github.com/nozaq/terraform-aws-secure-baseline/issues/167))
+- allow enabling/disabling individual alarms ([#164](https://github.com/nozaq/terraform-aws-secure-baseline/issues/164))
+
+### Fix
+- edge case when not logging to cloudwatch ([#161](https://github.com/nozaq/terraform-aws-secure-baseline/issues/161))
+
+### Refactor
+- define required providers for submodules ([#171](https://github.com/nozaq/terraform-aws-secure-baseline/issues/171))
 
 
 <a name="0.23.1"></a>
@@ -264,7 +454,20 @@
 <a name="0.0.1"></a>
 ## 0.0.1 - 2018-02-12
 
-[Unreleased]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.23.1...HEAD
+[1.0.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.34.0...1.0.0
+[0.34.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.33.0...0.34.0
+[0.33.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.32.0...0.33.0
+[0.32.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.31.0...0.32.0
+[0.31.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.30.0...0.31.0
+[0.30.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.29.2...0.30.0
+[0.29.2]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.29.1...0.29.2
+[0.29.1]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.29.0...0.29.1
+[0.29.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.28.0...0.29.0
+[0.28.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.27.1...0.28.0
+[0.27.1]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.27.0...0.27.1
+[0.27.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.26.0...0.27.0
+[0.26.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.24.0...0.26.0
+[0.24.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.23.1...0.24.0
 [0.23.1]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.23.0...0.23.1
 [0.23.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.22.0...0.23.0
 [0.22.0]: https://github.com/nozaq/terraform-aws-secure-baseline/compare/0.21.0...0.22.0

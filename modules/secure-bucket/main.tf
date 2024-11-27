@@ -1,12 +1,10 @@
 data "aws_iam_policy_document" "access_log_policy" {
-  count = var.enabled ? 1 : 0
-
   statement {
     actions = ["s3:*"]
     effect  = "Deny"
     resources = [
-      aws_s3_bucket.access_log[0].arn,
-      "${aws_s3_bucket.access_log[0].arn}/*"
+      aws_s3_bucket.access_log.arn,
+      "${aws_s3_bucket.access_log.arn}/*"
     ]
     condition {
       test     = "Bool"
@@ -21,48 +19,56 @@ data "aws_iam_policy_document" "access_log_policy" {
 }
 
 resource "aws_s3_bucket" "access_log" {
-  count = var.enabled ? 1 : 0
-
-  bucket = var.log_bucket_name
-
-  acl = "log-delivery-write"
-
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "AES256"
-      }
-    }
-  }
+  bucket        = var.log_bucket_name
   force_destroy = var.force_destroy
 
-  lifecycle_rule {
-    id      = "auto-archive"
-    enabled = true
+  tags = var.tags
+}
 
-    prefix = "/"
+resource "aws_s3_bucket_acl" "access_log" {
+  bucket = aws_s3_bucket.access_log.id
+  acl    = "log-delivery-write"
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "access_log" {
+  bucket = aws_s3_bucket.access_log.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
+    }
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "access_log" {
+  count = var.lifecycle_glacier_transition_days > 0 ? 1 : 0
+
+  bucket = aws_s3_bucket.access_log.id
+
+  rule {
+    id     = "auto-archive"
+    status = "Enabled"
+
+    filter {}
 
     transition {
       days          = var.lifecycle_glacier_transition_days
       storage_class = "GLACIER"
     }
   }
-
-  tags = var.tags
 }
 
 resource "aws_s3_bucket_policy" "access_log_policy" {
-  count = var.enabled ? 1 : 0
+  bucket = aws_s3_bucket.access_log.id
+  policy = data.aws_iam_policy_document.access_log_policy.json
 
-  bucket = aws_s3_bucket.access_log[0].id
-  policy = data.aws_iam_policy_document.access_log_policy[0].json
+  depends_on = [
+    aws_s3_bucket_public_access_block.access_log,
+  ]
 }
 
 resource "aws_s3_bucket_public_access_block" "access_log" {
-  count = var.enabled ? 1 : 0
-
-  bucket = aws_s3_bucket.access_log[0].id
-
+  bucket                  = aws_s3_bucket.access_log.id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
@@ -70,37 +76,49 @@ resource "aws_s3_bucket_public_access_block" "access_log" {
 }
 
 resource "aws_s3_bucket" "content" {
-  count = var.enabled ? 1 : 0
-
-  bucket = var.bucket_name
-
-  acl           = "private"
+  bucket        = var.bucket_name
   force_destroy = var.force_destroy
 
-  server_side_encryption_configuration {
-    rule {
-      apply_server_side_encryption_by_default {
-        sse_algorithm = "AES256"
-      }
+  tags = var.tags
+
+  depends_on = [
+    aws_s3_bucket_public_access_block.access_log
+  ]
+}
+
+resource "aws_s3_bucket_acl" "content" {
+  bucket = aws_s3_bucket.content.id
+  acl    = "private"
+}
+
+resource "aws_s3_bucket_server_side_encryption_configuration" "content" {
+  bucket = aws_s3_bucket.content.id
+
+  rule {
+    apply_server_side_encryption_by_default {
+      sse_algorithm = "AES256"
     }
+    bucket_key_enabled = var.bucket_key_enabled
   }
+}
 
-  logging {
-    target_bucket = aws_s3_bucket.access_log[0].id
-  }
+resource "aws_s3_bucket_logging" "content" {
+  bucket = aws_s3_bucket.content.id
 
-  versioning {
-    enabled = true
-    # Temporarily disabled due to Terraform issue.
-    # https://github.com/terraform-providers/terraform-provider-aws/issues/629
-    # mfa_delete = true
-  }
+  target_bucket = aws_s3_bucket.access_log.id
+  target_prefix = ""
+}
 
-  lifecycle_rule {
-    id      = "auto-archive"
-    enabled = true
+resource "aws_s3_bucket_lifecycle_configuration" "content" {
+  count = var.lifecycle_glacier_transition_days > 0 ? 1 : 0
 
-    prefix = "/"
+  bucket = aws_s3_bucket.content.id
+
+  rule {
+    id     = "auto-archive"
+    status = "Enabled"
+
+    filter {}
 
     transition {
       days          = var.lifecycle_glacier_transition_days
@@ -108,21 +126,28 @@ resource "aws_s3_bucket" "content" {
     }
 
     noncurrent_version_transition {
-      days          = var.lifecycle_glacier_transition_days
-      storage_class = "GLACIER"
+      noncurrent_days = var.lifecycle_glacier_transition_days
+      storage_class   = "GLACIER"
     }
   }
+}
 
-  tags = var.tags
+resource "aws_s3_bucket_versioning" "content" {
+  bucket = aws_s3_bucket.content.id
+
+  versioning_configuration {
+    status = "Enabled"
+    # Temporarily disabled due to Terraform issue.
+    # https://github.com/terraform-providers/terraform-provider-aws/issues/629
+    # mfa_delete = true
+  }
 }
 
 resource "aws_s3_bucket_public_access_block" "content" {
-  count = var.enabled ? 1 : 0
-
-  bucket = aws_s3_bucket.content[0].id
-
+  bucket                  = aws_s3_bucket.content.id
   block_public_acls       = true
   block_public_policy     = true
   ignore_public_acls      = true
   restrict_public_buckets = true
 }
+
