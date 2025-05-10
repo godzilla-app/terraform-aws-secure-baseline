@@ -64,3 +64,15 @@ resource "aws_config_configuration_recorder_status" "recorder" {
 
   depends_on = [aws_config_delivery_channel.bucket]
 }
+
+resource "aws_ecr_registry_scanning_configuration" "configuration" {
+  scan_type = "ENHANCED"
+
+  rule {
+    scan_frequency = "SCAN_ON_PUSH"
+    repository_filter {
+      filter      = "*"
+      filter_type = "WILDCARD"
+    }
+  }
+}
