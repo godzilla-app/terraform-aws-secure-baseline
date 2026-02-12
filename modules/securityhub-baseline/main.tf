@@ -25,7 +25,7 @@ resource "aws_securityhub_member" "members" {
   depends_on = [aws_securityhub_account.main]
   account_id = var.member_accounts[count.index].account_id
   email      = var.member_accounts[count.index].email
-  invite     = true
+  #invite     = true
 }
 
 resource "aws_securityhub_invite_accepter" "invitee" {
